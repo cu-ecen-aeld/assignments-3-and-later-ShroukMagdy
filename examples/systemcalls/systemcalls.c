@@ -1,4 +1,12 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -16,8 +24,8 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
-    return true;
+    return !(system(cmd));
+    //return true;
 }
 
 /**
@@ -58,10 +66,45 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    bool result = false;
+    fflush(stdout);
+    pid_t pid;
+    pid = fork();
+    if(pid == -1)
+    {
+    	perror("fork");  
+    	exit(EXIT_FAILURE);  
+    }
+    if(!pid)
+    {
+    	int ret;
+    	ret = execv(command[0],command);
+    	if(ret == -1)
+    	{
+    		perror("execv");
+    		exit(EXIT_FAILURE);
+    	}    
+    }
+    else
+    {
+    	int status;
+    	do
+    	{
+    		pid = wait(&status);
+    		if(pid == -1)
+    		{
+    			perror("wait");  
+    			exit(EXIT_FAILURE);  
+    		}    	
+    	}
+    	while(!WIFEXITED(status));
+    	result = !(WEXITSTATUS(status));
+    
+    }
 
     va_end(args);
 
-    return true;
+    return result;
 }
 
 /**
@@ -92,8 +135,51 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
-
+    bool result = false;
+    int fd;
+    fflush(stdout);
+    fd = open(outputfile,  O_RDWR | O_CREAT | O_SYNC);
+    pid_t pid;
+    pid = fork();
+    if(pid == -1)
+    {
+    	perror("fork");  
+    	exit(EXIT_FAILURE);  
+    }
+    if(!pid)
+    {
+    	int ret;
+    	ret = dup2(fd,1);
+    	if(ret == -1)
+    	{
+    		perror("dup2");
+    		exit(EXIT_FAILURE);
+    	} 
+    	ret = execv(command[0],command);
+    	if(ret == -1)
+    	{
+    		perror("execv");
+    		exit(EXIT_FAILURE);
+    	}    
+    }
+    else
+    {
+    	int status;
+    	do
+    	{
+    		pid = wait(&status);
+    		if(pid == -1)
+    		{
+    			perror("wait");  
+    			exit(EXIT_FAILURE);  
+    		}    	
+    	}
+    	while(!WIFEXITED(status));
+    	result = !(WEXITSTATUS(status));
+    
+    }
+    close(fd);
     va_end(args);
 
-    return true;
+    return result;
 }
