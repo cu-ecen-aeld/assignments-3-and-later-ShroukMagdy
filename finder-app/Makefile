@@ -1,6 +1,6 @@
 # Variables
-#CC = aarch64-none-linux-gnu-gcc
-CC = gcc
+CC = aarch64-none-linux-gnu-gcc
+#CC = gcc
 CFLAGS = -Wall -Wextra -I.
 #DEPS = foo.h
 OBJ = writer.o 
